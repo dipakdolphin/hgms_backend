@@ -1,0 +1,574 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/register": {
+      "post": {
+        "description": "Register a new user",
+        "parameters": [
+          {
+            "name": "username",
+            "description": "Username",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "password",
+            "description": "Password",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "User registered successfully"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/login": {
+      "post": {
+        "description": "Login a user and get a token",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "username",
+                  "password"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful login, returns token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid username or password"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/logout": {
+      "post": {
+        "description": "Logout a user",
+        "parameters": [
+          {
+            "name": "authorization",
+            "description": "JWT token",
+            "required": true,
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Logout successful"
+          },
+          "400": {
+            "description": "Token is missing"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/protected": {
+      "get": {
+        "description": "Protected route",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/products_item": {
+      "get": {
+        "description": "Get all products",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      },
+      "post": {
+        "description": "Create a new product",
+        "parameters": [
+          {
+            "name": "name",
+            "description": "Product name",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Product created successfully"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/products_item/{id}": {
+      "get": {
+        "description": "Get a product by ID",
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Product ID",
+            "required": true,
+            "type": "string",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          },
+          "404": {
+            "description": "Product not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      },
+      "put": {
+        "description": "Update a product by ID",
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Product ID",
+            "required": true,
+            "type": "string",
+            "in": "path"
+          },
+          {
+            "name": "name",
+            "description": "Product name",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "is_active",
+            "description": "Product status",
+            "required": true,
+            "type": "boolean"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Product updated successfully"
+          },
+          "404": {
+            "description": "No products found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      },
+      "delete": {
+        "description": "Delete a product by ID",
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Product ID",
+            "required": true,
+            "type": "string",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Product deleted successfully"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/create_unit": {
+      "post": {
+        "description": "Create a new unit",
+        "parameters": [
+          {
+            "name": "unit_name",
+            "description": "Unit name",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "code",
+            "description": "Unit code",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Unit created successfully"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/all_unit": {
+      "get": {
+        "description": "Get all units",
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/unit/{id}": {
+      "get": {
+        "description": "Get a unit by ID",
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Unit ID",
+            "required": true,
+            "type": "string",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          },
+          "404": {
+            "description": "Unit not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      },
+      "put": {
+        "description": "Update a unit by ID",
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Unit ID",
+            "required": true,
+            "type": "string",
+            "in": "path"
+          },
+          {
+            "name": "unit_name",
+            "description": "Unit name",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "code",
+            "description": "Unit code",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Unit updated successfully"
+          },
+          "404": {
+            "description": "Unit not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      },
+      "delete": {
+        "description": "Delete a unit by ID",
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Unit ID",
+            "required": true,
+            "type": "string",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Unit deleted successfully"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/grocery_orders": {
+      "get": {
+        "description": "Get all grocery orders",
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      },
+      "post": {
+        "description": "Create a new grocery order",
+        "parameters": [
+          {
+            "name": "name",
+            "description": "Order name",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "from_date",
+            "description": "Start date (YYYY/MM/DD)",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "to_date",
+            "description": "End date (YYYY/MM/DD)",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "is_end",
+            "description": "Order end status",
+            "required": true,
+            "type": "boolean"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Order created successfully"
+          },
+          "400": {
+            "description": "Invalid input data"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/grocery_orders/{id}": {
+      "put": {
+        "description": "Update a grocery order by ID",
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Order ID",
+            "required": true,
+            "type": "string",
+            "in": "path"
+          },
+          {
+            "name": "name",
+            "description": "Order name",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "from_date",
+            "description": "Start date (YYYY/MM/DD)",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "to_date",
+            "description": "End date (YYYY/MM/DD)",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "is_end",
+            "description": "Order end status",
+            "required": true,
+            "type": "boolean"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Order updated successfully"
+          },
+          "404": {
+            "description": "Order not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/create_grocery_order_item": {
+      "post": {
+        "description": "Create a new grocery order item",
+        "parameters": [
+          {
+            "name": "rate",
+            "description": "Item rate",
+            "required": true,
+            "type": "number"
+          },
+          {
+            "name": "order_id",
+            "description": "Order ID",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "product_id",
+            "description": "Product ID",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "unit_id",
+            "description": "Unit ID",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "quantity",
+            "description": "Item quantity",
+            "required": true,
+            "type": "number"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Order item created successfully"
+          },
+          "400": {
+            "description": "Invalid input data"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/order_details/{id}": {
+      "get": {
+        "description": "Get order details by order ID",
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Order ID",
+            "required": true,
+            "type": "string",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/order_by_id/{id}": {
+      "get": {
+        "description": "Get orders by product ID (optional)",
+        "parameters": [
+          {
+            "name": "id",
+            "description": "Product ID (optional)",
+            "required": false,
+            "type": "string",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/chart_data": {
+      "get": {
+        "description": "Get chart data for orders",
+        "responses": {
+          "200": {
+            "description": "Successful operation"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {},
+  "responses": {},
+  "parameters": {},
+  "securityDefinitions": {},
+  "tags": []
+}
