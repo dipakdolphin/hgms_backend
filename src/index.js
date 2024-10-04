@@ -390,6 +390,6 @@ app.get("/chart_data", authenticateToken, async (req, res) => {
     }
 });
 
-app.listen(9091, () => {
-    console.log('Server is running on port 9091');
+app.listen(9092, () => {
+    console.log('Server is running on port 9092');
 });
