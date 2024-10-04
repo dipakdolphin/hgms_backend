@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const pool = require('./db');
 // const swaggerJsdoc = require('swagger-jsdoc');
@@ -23,7 +23,7 @@ app.use(express.json());
 require('dotenv').config();
 
 app.use(cors({
-    origin: 'http://localhost:3000'
+    origin: '*'
 }));
 
 app.post('/register', async (req, res) => {
@@ -373,18 +373,23 @@ app.get("/order_by_id/:id?", authenticateToken, async (req, res) => {
 
 app.get("/chart_data", authenticateToken, async (req, res) => {
     try {
-        const query = "SELECT p.name, SUM(total_amount) " +
+        const query = "SELECT p.name, cast( SUM(total_amount)as numeric) as total_amount " +
             "FROM products_groceryorderitem pg " +
             "JOIN public.products_groceryorder p ON pg.order_id = p.id " +
             "GROUP BY order_id, p.name";
         const report_data = await pool.query(query);
-        res.json(report_data.rows);
+        const mappedData = report_data.rows.map(item => ({
+            name: String(item.name),                 // Ensure name is a string
+            total_amount: Number(item.total_amount)  // Ensure total_amount is numeric
+        }));
+        // res.json(report_data.rows);
+        res.json(mappedData);
     } catch (err) {
         console.error(err);
         res.status(500).send("Server error");
     }
 });
 
-app.listen(8080, () => {
-    console.log('Server is running on port 8080');
+app.listen(9091, () => {
+    console.log('Server is running on port 9091');
 });

@@ -14,7 +14,12 @@
             <node kind="database" qname="@">
               <node kind="schema" qname="@" />
             </node>
-            <node kind="database" qname="auth" />
+            <node kind="database" qname="auth">
+              <node kind="schema">
+                <name qname="@" />
+                <name qname="myschema" />
+              </node>
+            </node>
           </node>
         </introspection-scope>
       </schema-mapping>
