@@ -81,18 +81,12 @@ app.post('/reset-password', async (req, res) => {
     const { username, newPassword } = req.body;
 
     try {
-        // Check if user exists
         const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
         const user = result.rows[0];
-
         if (!user) {
             return res.status(404).send('User not found');
         }
-
-        // Hash the new password
         const hashedNewPassword = await bcrypt.hash(newPassword, 10);
-
-        // Update the user's password in the database
         await pool.query('UPDATE users SET password = $1 WHERE username = $2', [hashedNewPassword, username]);
 
         res.status(200).send('Password reset successfully');
