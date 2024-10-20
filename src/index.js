@@ -3,21 +3,9 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const pool = require('./db');
-// const swaggerJsdoc = require('swagger-jsdoc');
-// const swaggerUi = require('swagger-ui-express');
-// const swaggerDefinition = require('./swaggerDefinition');
-// const swaggerDocument = require('./swagger.json');
 const authenticateToken = require('./Authtoken');
 
 const app = express();
-
-// Swagger setup
-// const options = {
-//     swaggerDefinition,
-//     apis: ['./*.js'], // Assuming your route files are in the same directory
-// };
-
-// app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 app.use(express.json());
 require('dotenv').config();
@@ -97,20 +85,13 @@ app.post('/reset-password', async (req, res) => {
 });
 
 
-
-// app.get('/protected', authenticateToken, (req, res) => {
-//     res.send('Protected route');
-// });
-
-// Products Routes
-
 app.get('/products_item', authenticateToken, async (req, res) => {
     try {
         const all_products = await pool.query("SELECT id, name, is_active FROM products_item");
         res.json(all_products.rows);
     } catch (err) {
         console.error(err);
-        res.status(500).send('Server error');
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 });
 
@@ -124,7 +105,7 @@ app.get('/products_item/:id', authenticateToken, async (req, res) => {
         res.json(product.rows[0]);
     } catch (err) {
         console.error(err);
-        res.status(500).send('Server error');
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 });
 
@@ -132,9 +113,22 @@ app.post('/products_item', authenticateToken, async (req, res) => {
     try {
         const { name } = req.body;
         const created_by_id = req.user && req.user.id;
+
         if (!created_by_id) {
             return res.status(400).json({ error: 'User ID not found' });
         }
+
+        // Check if the product name already exists
+        const existingProduct = await pool.query(
+            "SELECT * FROM products_item WHERE name = $1",
+            [name]
+        );
+
+        if (existingProduct.rows.length > 0) {
+            return res.status(400).json({ error: 'Product name already exists' });
+        }
+
+        // Insert the new product if name doesn't exist
         const new_product = await pool.query(
             "INSERT INTO products_item (name, created_by_id, is_active) VALUES ($1, $2, true) RETURNING *",
             [name, created_by_id]
@@ -143,9 +137,10 @@ app.post('/products_item', authenticateToken, async (req, res) => {
         res.status(201).json(new_product.rows[0]);
     } catch (err) {
         console.error(err);
-        res.status(500).send('Server error');
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 });
+
 
 app.put('/products_item/:id', authenticateToken, async (req, res) => {
     try {
@@ -173,7 +168,7 @@ app.delete('/products_item/:id', authenticateToken, async (req, res) => {
         res.json("Product deleted");
     } catch (err) {
         console.error(err);
-        res.status(500).send('Server error');
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 });
 
@@ -184,6 +179,16 @@ app.post("/create_unit", authenticateToken, async (req, res) => {
         const created_by_id = req.user && req.user.id;
         if (!created_by_id) {
             return res.status(400).json({ error: 'User ID not found' });
+        }
+
+        // Check if the unit name or code already exists
+        const existingUnit = await pool.query(
+            "SELECT * FROM products_unit WHERE unit_name = $1 OR code = $2",
+            [unit_name, code]
+        );
+
+        if (existingUnit.rows.length > 0) {
+            return res.status(400).json({ error: 'Unit name or code already exists' });
         }
 
         const create_unit = await pool.query(
@@ -205,7 +210,7 @@ app.get("/all_unit", authenticateToken, async (req, res) => {
         res.json(get_all_unit.rows);
     } catch (err) {
         console.error(err);
-        res.status(500).send("server error");
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 });
 
@@ -220,7 +225,7 @@ app.get("/unit/:id", authenticateToken, async (req, res) => {
         res.json(unit.rows[0]);
     } catch (err) {
         console.error(err);
-        res.status(500).send("Server error");
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 });
 
@@ -238,7 +243,7 @@ app.put("/unit/:id", authenticateToken, async (req, res) => {
         res.json(updatedUnit.rows[0]);
     } catch (err) {
         console.error(err);
-        res.status(500).send("Server error");
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 });
 
@@ -249,7 +254,7 @@ app.delete("/unit/:id", authenticateToken, async (req, res) => {
         res.json({ message: "Unit deleted successfully" });
     } catch (err) {
         console.error(err);
-        res.status(500).send("Server error");
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 });
 
@@ -260,7 +265,7 @@ app.get("/grocery_orders", authenticateToken, async (req, res) => {
         res.json(get_all_orders.rows);
     } catch (err) {
         console.error(err);
-        res.status(500).send("server error");
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 });
 
@@ -278,6 +283,17 @@ app.post('/grocery_orders', authenticateToken, async (req, res) => {
         if (!dateFormatRegex.test(from_date) || !dateFormatRegex.test(to_date)) {
             return res.status(400).json({ error: 'Invalid date format. Date format should be YYYY/MM/DD' });
         }
+
+        // Check if an order with the same name already exists
+        const existingOrder = await pool.query(
+            'SELECT * FROM products_groceryorder WHERE name = $1',
+            [name]
+        );
+
+        if (existingOrder.rows.length > 0) {
+            return res.status(400).json({ error: 'An order with this name already exists' });
+        }
+
         const newGroceryOrder = await pool.query(
             'INSERT INTO products_groceryorder (name, from_date, to_date, is_end, created_by_id) VALUES ($1, $2, $3, $4, $5) RETURNING *',
             [name, from_date, to_date, is_end, created_by_id]
@@ -304,7 +320,7 @@ app.put("/grocery_orders/:id", authenticateToken, async (req, res) => {
         res.json(update_grocery_order.rows[0]);
     } catch (err) {
         console.error(err);
-        res.status(500).send("Server error");
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 });
 
@@ -323,7 +339,7 @@ app.post('/create_grocery_order_item', authenticateToken, async (req, res) => {
         res.status(201).json(newOrderItem.rows[0]);
     } catch (err) {
         console.error(err);
-        res.status(500).send('Server error');
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 });
 app.get("/order_details/:id", authenticateToken, async (req, res) => {
@@ -341,7 +357,7 @@ app.get("/order_details/:id", authenticateToken, async (req, res) => {
         res.json(order_details.rows);
     } catch (err) {
         console.error(err);
-        res.status(500).send("Server error");
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 });
 
@@ -380,7 +396,7 @@ app.get("/chart_data", authenticateToken, async (req, res) => {
         res.json(mappedData);
     } catch (err) {
         console.error(err);
-        res.status(500).send("Server error");
+        res.status(500).json({ error: 'Server error', details: err.message });
     }
 });
 
