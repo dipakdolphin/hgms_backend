@@ -400,6 +400,34 @@ app.get("/chart_data", authenticateToken, async (req, res) => {
     }
 });
 
+app.get("/product_price/:product_id", authenticateToken, async (req, res) => {
+    try {
+        const { product_id } = req.params;
+        
+        const priceHistory = await pool.query(
+            `SELECT pi.name, 
+                    pgi.rate, 
+                    CAST(pgi.created_at as DATE) as date 
+             FROM products_groceryorderitem pgi 
+             JOIN products_item pi ON pgi.product_id = pi.id 
+             WHERE product_id = $1
+             ORDER BY pgi.created_at DESC`,
+            [product_id]
+        );
+
+        if (priceHistory.rows.length === 0) {
+            return res.status(404).json({ 
+                error: "No price history found for this product" 
+            });
+        }
+
+        res.json(priceHistory.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Server error', details: err.message });
+    }
+});
+
 let port = 9092;
 
 app.listen(port, () => {
