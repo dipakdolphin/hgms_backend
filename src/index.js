@@ -405,16 +405,13 @@ app.get("/product_price/:product_id", authenticateToken, async (req, res) => {
         const { product_id } = req.params;
         
         const priceHistory = await pool.query(
-            `SELECT pi.name, 
-                    pgi.rate, 
-                    CAST(pgi.created_at as DATE) as date 
-             FROM products_groceryorderitem pgi 
-             JOIN products_item pi ON pgi.product_id = pi.id 
-             WHERE product_id = $1
+            `select  pi.name, rate, pgo.name, Date(pgi.created_at) as date  from products_groceryorderitem pgi
+                join products_item pi on pgi.product_id = pi.id
+                 join products_groceryorder pgo on pgi.order_id = pgo.id
+             where product_id = $1
              ORDER BY pgi.created_at DESC`,
             [product_id]
         );
-
         if (priceHistory.rows.length === 0) {
             return res.status(404).json({ 
                 error: "No price history found for this product" 
