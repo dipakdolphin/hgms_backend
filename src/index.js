@@ -405,7 +405,7 @@ app.get("/product_price/:product_id", authenticateToken, async (req, res) => {
         const { product_id } = req.params;
         
         const priceHistory = await pool.query(
-            `select  pi.name, rate, pgo.name, Date(pgi.created_at) as date  from products_groceryorderitem pgi
+            `select  pi.name as ProductName, rate, pgo.name as OrderName, Date(pgi.created_at) as date  from products_groceryorderitem pgi
                 join products_item pi on pgi.product_id = pi.id
                  join products_groceryorder pgo on pgi.order_id = pgo.id
              where product_id = $1
