@@ -346,7 +346,7 @@ app.get("/order_details/:id", authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
         const order_details = await pool.query(
-            "SELECT pg.id AS orderId,pi.id as ProductId, pi.name, pu.unit_name AS unit, pgi.rate, pgi.quantity, pgi.total_amount AS total " +
+            "SELECT pg.id AS orderId,pi.id as ProductId, pi.name, pu.unit_name AS unit, pgi.rate, pgi.quantity, pgi.total_amount AS total,Date(pgi.created_at) as saveDate " +
             "FROM products_groceryorderitem pgi " +
             "JOIN products_item pi ON pi.id = pgi.product_id " +
             "JOIN products_unit pu ON pgi.unit_id = pu.id " +
