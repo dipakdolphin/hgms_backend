@@ -261,7 +261,9 @@ app.delete("/unit/:id", authenticateToken, async (req, res) => {
 // Orders Routes
 app.get("/grocery_orders", authenticateToken, async (req, res) => {
     try {
-        const get_all_orders = await pool.query("SELECT id, name, TO_CHAR(from_date, 'YYYY/MM/DD') as from_date, TO_CHAR(to_date, 'YYYY/MM/DD') as to_date, is_end FROM products_groceryorder");
+        const get_all_orders = await pool.query(
+            "SELECT id, name, TO_CHAR(from_date, 'YYYY/MM/DD') as from_date, TO_CHAR(to_date, 'YYYY/MM/DD') as to_date, is_end, budget FROM products_groceryorder"
+        );
         res.json(get_all_orders.rows);
     } catch (err) {
         console.error(err);
@@ -271,9 +273,9 @@ app.get("/grocery_orders", authenticateToken, async (req, res) => {
 
 app.post('/grocery_orders', authenticateToken, async (req, res) => {
     try {
-        const { name, from_date, to_date, is_end } = req.body;
+        const { name, from_date, to_date, is_end, budget } = req.body;
         const created_by_id = req.user && req.user.id;
-        if (!name || !from_date || !to_date || is_end === undefined) {
+        if (!name || !from_date || !to_date || is_end === undefined || budget === undefined) {
             return res.status(400).json({ error: 'Missing required fields' });
         }
         if (from_date > to_date) {
@@ -295,8 +297,8 @@ app.post('/grocery_orders', authenticateToken, async (req, res) => {
         }
 
         const newGroceryOrder = await pool.query(
-            'INSERT INTO products_groceryorder (name, from_date, to_date, is_end, created_by_id) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-            [name, from_date, to_date, is_end, created_by_id]
+            'INSERT INTO products_groceryorder (name, from_date, to_date, is_end, budget, created_by_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+            [name, from_date, to_date, is_end, budget, created_by_id]
         );
         res.status(201).json(newGroceryOrder.rows[0]);
     } catch (err) {
@@ -346,7 +348,7 @@ app.get("/order_details/:id", authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
         const order_details = await pool.query(
-            "SELECT pg.id AS orderId,pi.id as ProductId, pi.name, pu.code AS unit, pgi.rate, pgi.quantity, pgi.total_amount AS total,Date(pgi.created_at) as saveDate " +
+            "SELECT pg.id AS orderId, pi.id as ProductId, pi.name, pu.code AS unit, pgi.rate, pgi.quantity, pgi.total_amount AS total, Date(pgi.created_at) as saveDate, pg.budget " +
             "FROM products_groceryorderitem pgi " +
             "JOIN products_item pi ON pi.id = pgi.product_id " +
             "JOIN products_unit pu ON pgi.unit_id = pu.id " +
@@ -354,7 +356,17 @@ app.get("/order_details/:id", authenticateToken, async (req, res) => {
             "WHERE pg.id = $1",
             [id]
         );
-        res.json(order_details.rows);
+
+        // Calculate total amount for the order
+        const totalAmount = order_details.rows.reduce((sum, item) => sum + parseFloat(item.total), 0);
+        const budget = order_details.rows.length > 0 ? order_details.rows[0].budget : 0; // Get budget from the first item
+        const remainingBudget = budget - totalAmount; // Calculate remaining budget
+
+        res.json({
+            orderDetails: order_details.rows,
+            totalAmount,
+            remainingBudget // Include remaining budget in response
+        });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Server error', details: err.message });
