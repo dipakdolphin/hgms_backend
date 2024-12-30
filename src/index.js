@@ -326,6 +326,47 @@ app.put("/grocery_orders/:id", authenticateToken, async (req, res) => {
     }
 });
 
+app.put("/gorcery_order_items/:id", authenticateToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const updated_by_id = req.user && req.user.id;
+        const { rate, product_id, unit_id, quantity } = req.body;
+
+        // Validate required fields
+        if (!rate || !product_id || !unit_id || !quantity) {
+            return res.status(400).json({ error: 'Missing required fields' });
+        }
+
+        // Calculate total amount
+        const total_amount = rate * quantity;
+
+        // Update the grocery order item
+        const updatedOrderItem = await pool.query(
+            `UPDATE products_groceryorderitem 
+             SET rate = $1, 
+                 product_id = $2, 
+                 unit_id = $3, 
+                 quantity = $4,
+                 total_amount = $5,
+                 updated_by_id = $6,
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE id = $7 
+             RETURNING *`,
+            [rate, product_id, unit_id, quantity, total_amount, updated_by_id, id]
+        );
+
+        // Check if item exists
+        if (updatedOrderItem.rows.length === 0) {
+            return res.status(404).json({ error: "Order item not found" });
+        }
+
+        res.json(updatedOrderItem.rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Server error', details: err.message });
+    }
+});
+
 app.post('/create_grocery_order_item', authenticateToken, async (req, res) => {
     try {
         const { rate, order_id, product_id, unit_id, quantity } = req.body;
@@ -348,16 +389,14 @@ app.get("/order_details/:id", authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
         const order_details = await pool.query(
-            "SELECT pg.id AS orderId, pi.id as ProductId, pi.name, pu.code AS unit, pgi.rate, pgi.quantity, pgi.total_amount AS total, Date(pgi.created_at) as saveDate, pg.budget " +
+            "SELECT pgi.id AS orderId, pi.id as ProductId, pi.name, pu.code AS unit, pgi.rate, pgi.quantity, pgi.total_amount AS total, Date(pgi.created_at) as saveDate, pg.budget " +
             "FROM products_groceryorderitem pgi " +
             "JOIN products_item pi ON pi.id = pgi.product_id " +
             "JOIN products_unit pu ON pgi.unit_id = pu.id " +
             "JOIN public.products_groceryorder pg ON pgi.order_id = pg.id " +
-            "WHERE pg.id = $1",
+            "WHERE pg.id = $1 order by pgi.id",
             [id]
         );
-
-        // Calculate total amount for the order
         const totalAmount = order_details.rows.reduce((sum, item) => sum + parseFloat(item.total), 0);
         const budget = order_details.rows.length > 0 ? order_details.rows[0].budget : 0; // Get budget from the first item
         const remainingBudget = budget - totalAmount; // Calculate remaining budget
@@ -372,6 +411,9 @@ app.get("/order_details/:id", authenticateToken, async (req, res) => {
         res.status(500).json({ error: 'Server error', details: err.message });
     }
 });
+
+
+
 
 app.get("/order_by_id/:id?", authenticateToken, async (req, res) => {
     try {
@@ -431,6 +473,152 @@ app.get("/product_price/:product_id", authenticateToken, async (req, res) => {
         }
 
         res.json(priceHistory.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Server error', details: err.message });
+    }
+});
+
+app.post('/create_multiple_products', authenticateToken, async (req, res) => {
+    try {
+        const { products } = req.body; // Expecting an array of product names
+        const created_by_id = req.user && req.user.id;
+
+        if (!created_by_id) {
+            return res.status(400).json({ error: 'User ID not found' });
+        }
+
+        // Validate input
+        if (!products || !Array.isArray(products) || products.length === 0) {
+            return res.status(400).json({ error: 'Invalid or empty product list' });
+        }
+
+        // Check for duplicate product names in the input
+        const duplicateNames = products.filter((name, index) => products.indexOf(name) !== index);
+        if (duplicateNames.length > 0) {
+            return res.status(400).json({ error: 'Duplicate product names are not allowed', duplicates: duplicateNames });
+        }
+
+        // Check for existing products in the database
+        const existingProductsQuery = await pool.query(
+            "SELECT name FROM products_item WHERE name = ANY($1)",
+            [products]
+        );
+
+        const existingProductNames = existingProductsQuery.rows.map(row => row.name);
+        if (existingProductNames.length > 0) {
+            return res.status(400).json({ 
+                error: 'Some products already exist', 
+                existingProducts: existingProductNames 
+            });
+        }
+
+        // Prepare the bulk insert
+        const insertValues = products.map(name => [name, created_by_id, true]);
+        
+        // Construct the bulk insert query
+        const insertQuery = `
+            INSERT INTO products_item (name, created_by_id, is_active) 
+            VALUES ${insertValues.map((_, index) => `($${index*3+1}, $${index*3+2}, $${index*3+3})`).join(', ')}
+            RETURNING *
+        `;
+
+        // Flatten the values array for query parameters
+        const flattenedValues = insertValues.reduce((acc, val) => acc.concat(val), []);
+
+        // Execute the bulk insert
+        const newProducts = await pool.query(insertQuery, flattenedValues);
+
+        res.status(201).json({
+            message: 'Products created successfully',
+            products: newProducts.rows
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Server error', details: err.message });
+    }
+});
+
+app.post('/create_multiple_order_items', authenticateToken, async (req, res) => {
+    try {
+        const { order_id, product_ids } = req.body;
+        const created_by_id = req.user && req.user.id;
+
+        // Input validation
+        if (!order_id || !product_ids || !Array.isArray(product_ids) || product_ids.length === 0) {
+            return res.status(400).json({ 
+                error: 'Invalid input. Please provide order_id and an array of product_ids' 
+            });
+        }
+
+        // Verify order exists
+        const orderExists = await pool.query(
+            "SELECT id FROM products_groceryorder WHERE id = $1",
+            [order_id]
+        );
+
+        if (orderExists.rows.length === 0) {
+            return res.status(404).json({ error: 'Order not found' });
+        }
+
+        // Check for existing products in the order
+        const existingItems = await pool.query(
+            "SELECT product_id FROM products_groceryorderitem WHERE order_id = $1 AND product_id = ANY($2)",
+            [order_id, product_ids]
+        );
+
+        const existingProductIds = existingItems.rows.map(row => row.product_id);
+        const newProductIds = product_ids.filter(id => !existingProductIds.includes(id));
+
+        if (newProductIds.length === 0) {
+            return res.status(400).json({ 
+                error: 'All products are already in this order',
+                existingProducts: existingProductIds
+            });
+        }
+
+        // Get default unit_id (you might want to adjust this based on your needs)
+        const defaultUnit = await pool.query(
+            "SELECT id FROM products_unit LIMIT 1"
+        );
+        const default_unit_id = defaultUnit.rows[0].id;
+
+        // Prepare the bulk insert with default values
+        const defaultRate = 0;
+        const defaultQuantity = 0;
+        
+        const insertValues = newProductIds.map(product_id => [
+            defaultRate,
+            created_by_id,
+            order_id,
+            product_id,
+            default_unit_id,
+            defaultQuantity,
+            created_by_id
+        ]);
+
+        // Construct the bulk insert query
+        const insertQuery = `
+            INSERT INTO products_groceryorderitem 
+            (rate, created_by_id, order_id, product_id, unit_id, quantity, updated_by_id)
+            VALUES ${insertValues.map((_, index) => 
+                `($${index*7+1}, $${index*7+2}, $${index*7+3}, $${index*7+4}, $${index*7+5}, $${index*7+6}, $${index*7+7})`
+            ).join(', ')}
+            RETURNING *
+        `;
+
+        // Flatten the values array for query parameters
+        const flattenedValues = insertValues.reduce((acc, val) => acc.concat(val), []);
+
+        // Execute the bulk insert
+        const newOrderItems = await pool.query(insertQuery, flattenedValues);
+
+        res.status(201).json({
+            message: 'Products added to order successfully',
+            addedItems: newOrderItems.rows,
+            skippedProducts: existingProductIds
+        });
+
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Server error', details: err.message });
