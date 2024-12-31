@@ -347,12 +347,11 @@ app.put("/gorcery_order_items/:id", authenticateToken, async (req, res) => {
                  product_id = $2, 
                  unit_id = $3, 
                  quantity = $4,
-                 total_amount = $5,
-                 updated_by_id = $6,
+                 updated_by_id = $5,
                  updated_at = CURRENT_TIMESTAMP
-             WHERE id = $7 
+             WHERE id = $6 
              RETURNING *`,
-            [rate, product_id, unit_id, quantity, total_amount, updated_by_id, id]
+            [rate, product_id, unit_id, quantity, updated_by_id, id]
         );
 
         // Check if item exists
