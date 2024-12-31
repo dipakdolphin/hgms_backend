@@ -311,10 +311,10 @@ app.put("/grocery_orders/:id", authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
         const updated_by_id = req.user && req.user.id;
-        const { name, from_date, to_date, is_end } = req.body;
+        const { name, from_date, to_date, is_end, budget } = req.body;
         const update_grocery_order = await pool.query(
-            "UPDATE products_groceryorder SET name = $1, updated_by_id = $2, is_end = $3, from_date = $4, to_date = $5 WHERE id = $6 RETURNING *",
-            [name, updated_by_id, is_end, from_date, to_date, id]
+            "UPDATE products_groceryorder SET name = $1, updated_by_id = $2, is_end = $3, from_date = $4, to_date = $5, budget= $6  WHERE id = $7 RETURNING *",
+            [name, updated_by_id, is_end, from_date, to_date,budget, id]
         );
         if (update_grocery_order.rows.length === 0) {
             return res.status(404).json({ error: "Order not found" });
