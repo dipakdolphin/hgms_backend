@@ -281,10 +281,21 @@ app.post('/grocery_orders', authenticateToken, async (req, res) => {
         if (from_date > to_date) {
             return res.status(400).json({ error: 'From date cannot be greater than to date' });
         }
-        const dateFormatRegex = /^\d{4}\/\d{2}\/\d{2}$/;
-        if (!dateFormatRegex.test(from_date) || !dateFormatRegex.test(to_date)) {
-            return res.status(400).json({ error: 'Invalid date format. Date format should be YYYY/MM/DD' });
+
+        const fromDate = new Date(from_date);
+        const toDate = new Date(to_date);
+
+        if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
+            return res.status(400).json({ error: 'Invalid date format' });
         }
+
+        if (fromDate > toDate) {
+            return res.status(400).json({ error: 'From date cannot be greater than to date' });
+        }
+        // const dateFormatRegex = /^\d{4}\/\d{2}\/\d{2}$/;
+        // if (!dateFormatRegex.test(from_date) || !dateFormatRegex.test(to_date)) {
+        //     return res.status(400).json({ error: 'Invalid date format. Date format should be YYYY/MM/DD' });
+        // }
 
         // Check if an order with the same name already exists
         const existingOrder = await pool.query(
